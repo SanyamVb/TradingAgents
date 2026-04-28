@@ -61,13 +61,13 @@ jobs:
           retention-days: 30
 
       - name: Send Telegram notification
-        if: ${{ success() && secrets.TELEGRAM_BOT_TOKEN != '' }}
+        if: success() && env.TELEGRAM_BOT_TOKEN != ''
         run: |
           OUTPUT=$(cat analysis_output.txt)
           # Telegram message limit is 4096 chars — trim if needed
           MESSAGE=$(echo "$OUTPUT" | tail -c 3900)
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
             -d text="$MESSAGE" \
             -d parse_mode="HTML"
         env:
