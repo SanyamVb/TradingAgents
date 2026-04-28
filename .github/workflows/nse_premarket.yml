@@ -1,0 +1,75 @@
+name: NSE Pre-Market Analysis
+
+on:
+  schedule:
+    # 8:45 AM IST = 03:15 UTC, Mon–Fri
+    # Note: GitHub Actions cron can fire 1–10 min late during peak times
+    - cron: '15 3 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      tickers:
+        description: 'Space-separated NSE tickers (e.g. RELIANCE.NS TCS.NS). Leave blank for defaults.'
+        required: false
+        default: ''
+
+jobs:
+  analyse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30   # each ticker takes ~2–5 min; 5 tickers ≈ 15–25 min
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -e .
+          pip install pandas-market-calendars>=4.3
+
+      - name: Run pre-market analysis
+        id: analysis
+        run: |
+          # Use manual tickers if provided via workflow_dispatch, else defaults
+          TICKERS="${{ github.event.inputs.tickers }}"
+          if [ -z "$TICKERS" ]; then
+            python scripts/india_premarket.py | tee analysis_output.txt
+          else
+            python scripts/india_premarket.py $TICKERS | tee analysis_output.txt
+          fi
+        env:
+          OPENAI_API_KEY:     ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_API_KEY:     ${{ secrets.GOOGLE_API_KEY }}
+          # Override LLM via repo variables (Settings → Variables → Actions)
+          TRADINGAGENTS_LLM_PROVIDER:  ${{ vars.TRADINGAGENTS_LLM_PROVIDER }}
+          TRADINGAGENTS_DEEP_LLM:      ${{ vars.TRADINGAGENTS_DEEP_LLM }}
+          TRADINGAGENTS_QUICK_LLM:     ${{ vars.TRADINGAGENTS_QUICK_LLM }}
+          TRADINGAGENTS_BACKEND_URL:   ${{ secrets.TRADINGAGENTS_BACKEND_URL }}
+
+      - name: Upload analysis as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nse-analysis-${{ github.run_id }}
+          path: analysis_output.txt
+          retention-days: 30
+
+      - name: Send Telegram notification
+        if: ${{ success() && secrets.TELEGRAM_BOT_TOKEN != '' }}
+        run: |
+          OUTPUT=$(cat analysis_output.txt)
+          # Telegram message limit is 4096 chars — trim if needed
+          MESSAGE=$(echo "$OUTPUT" | tail -c 3900)
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="$MESSAGE" \
+            -d parse_mode="HTML"
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
