@@ -41,12 +41,18 @@ logging.basicConfig(level=logging.WARNING)  # suppress verbose LangGraph logs
 # ── Configuration ──────────────────────────────────────────────────────────────
 
 # Edit this list or pass tickers as CLI arguments
+# Top 10 high-performing Nifty 50 large-caps (as of 2026)
 DEFAULT_TICKERS = [
-    "RELIANCE.NS",
-    "INFY.NS",
-    "TCS.NS",
-    "HDFCBANK.NS",
-    "ICICIBANK.NS",
+    "RELIANCE.NS",      # Largest company by market cap — energy, retail, telecom
+    "TCS.NS",           # Top IT; consistent earnings and dividend payer
+    "HDFCBANK.NS",      # Largest private bank
+    "ICICIBANK.NS",     # High-growth private bank
+    "BHARTIARTL.NS",    # Telecom leader; strong subscriber growth
+    "SBIN.NS",          # Largest PSU bank; high beta, high volume
+    "INFY.NS",          # IT bellwether; large institutional ownership
+    "HINDUNILVR.NS",    # FMCG defensive; consistent compounder
+    "ITC.NS",           # Conglomerate; high dividend yield
+    "LT.NS",            # Infrastructure & engineering; capex play
 ]
 
 # LLM settings — set API key via environment variable
