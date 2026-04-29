@@ -35,6 +35,7 @@ except ImportError:
 
 from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.default_config import DEFAULT_CONFIG
+from tradingagents.utils import UsageTracker
 
 logging.basicConfig(level=logging.WARNING)  # suppress verbose LangGraph logs
 
@@ -127,7 +128,7 @@ def build_config() -> dict:
     config["deep_think_llm"]  = DEEP_THINK_LLM
     config["quick_think_llm"] = QUICK_THINK_LLM
     config["backend_url"]     = BACKEND_URL
-    config["max_debate_rounds"]       = 1   # keep fast; raise to 2–3 for more debate depth
+    config["max_debate_rounds"]       = 1
     config["max_risk_discuss_rounds"] = 1
     config["data_vendors"] = {
         "core_stock_apis":      "yfinance",
@@ -138,8 +139,9 @@ def build_config() -> dict:
     return config
 
 
-def run_ticker(ta: TradingAgentsGraph, ticker: str, trade_date: str) -> None:
+def run_ticker(ta: TradingAgentsGraph, ticker: str, trade_date: str, tracker: UsageTracker) -> None:
     print(f"\n  Analysing {ticker} …", flush=True)
+    tracker.start_ticker(ticker)
     try:
         final_state, signal = ta.propagate(ticker, trade_date)
 
@@ -167,6 +169,7 @@ def run_ticker(ta: TradingAgentsGraph, ticker: str, trade_date: str) -> None:
         print(f"  Rating       : {signal}")
         if thesis_block:
             print(f"  Thesis       : {thesis_block}")
+        tracker.print_ticker_usage(ticker)
 
     except Exception as exc:
         print(f"\n  FAILED {ticker}: {exc}")
@@ -186,14 +189,16 @@ def main():
     print(f"{'='*62}")
 
     config = build_config()
-    ta = TradingAgentsGraph(debug=False, config=config)
+    tracker = UsageTracker()
+    ta = TradingAgentsGraph(debug=False, config=config, callbacks=[tracker.handler])
 
     for ticker in tickers:
-        run_ticker(ta, ticker, trade_date)
+        run_ticker(ta, ticker, trade_date, tracker)
 
     print(f"\n{'='*62}")
     print("  All recommendations are informational only.")
     print(f"{'='*62}\n")
+    tracker.print_summary()
 
 
 if __name__ == "__main__":

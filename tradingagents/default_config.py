@@ -35,6 +35,9 @@ DEFAULT_CONFIG = {
     "max_debate_rounds": 1,
     "max_risk_discuss_rounds": 1,
     "max_recur_limit": 100,
+    # Output token caps per LLM role — keeps analyst reports concise and reduces cost
+    "quick_max_tokens": 2048,   # analysts, debate, trader (Haiku)
+    "deep_max_tokens": 4096,    # research manager, portfolio manager (Sonnet)
     # Data vendor configuration
     # Category-level configuration (default for all tools in category)
     "data_vendors": {

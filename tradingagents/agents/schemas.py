@@ -126,11 +126,21 @@ class TraderProposal(BaseModel):
     )
     entry_price: Optional[float] = Field(
         default=None,
-        description="Optional entry price target in the instrument's quote currency.",
+        description=(
+            "Entry price in the instrument's quote currency. "
+            "For Buy: set at or slightly above the current price (limit buy). "
+            "For Sell: set at or slightly below the current price (limit sell). "
+            "Must always be close to the latest verified close price provided."
+        ),
     )
     stop_loss: Optional[float] = Field(
         default=None,
-        description="Optional stop-loss price in the instrument's quote currency.",
+        description=(
+            "Stop-loss price in the instrument's quote currency. "
+            "For Buy: stop_loss MUST be strictly BELOW entry_price (cuts loss if price falls). "
+            "For Sell: stop_loss MUST be strictly ABOVE entry_price (cuts loss if price rises). "
+            "Never set stop_loss on the wrong side of entry_price."
+        ),
     )
     position_sizing: Optional[str] = Field(
         default=None,

@@ -68,7 +68,23 @@ def load_ohlcv(symbol: str, curr_date: str) -> pd.DataFrame:
 
     if os.path.exists(data_file):
         data = pd.read_csv(data_file, on_bad_lines="skip", encoding="utf-8")
+        # Validate cache covers curr_date — if the latest row is older than
+        # the requested date, the cache is stale and must be refreshed.
+        try:
+            max_cached = pd.to_datetime(data["Date"], errors="coerce").max()
+            if pd.isna(max_cached) or max_cached < curr_date_dt:
+                logger.info(
+                    "Cache for %s is stale (max=%s, requested=%s) — refreshing",
+                    symbol, max_cached, curr_date_dt,
+                )
+                os.remove(data_file)
+                data = None
+        except Exception:
+            data = None
     else:
+        data = None
+
+    if data is None:
         data = yf_retry(lambda: yf.download(
             symbol,
             start=start_str,
