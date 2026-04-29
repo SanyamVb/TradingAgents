@@ -15,7 +15,7 @@ on:
 jobs:
   analyse:
     runs-on: ubuntu-latest
-    timeout-minutes: 30   # each ticker takes ~2–5 min; 5 tickers ≈ 15–25 min
+    timeout-minutes: 60   # 10 tickers × ~3 min each = ~30 min; 60 min gives headroom
 
     steps:
       - name: Checkout code

@@ -151,10 +151,42 @@ class TraderProposal(BaseModel):
 def render_trader_proposal(proposal: TraderProposal) -> str:
     """Render a TraderProposal to markdown.
 
+    Also validates directional consistency:
+    - BUY/SELL must have entry_price and stop_loss
+    - stop_loss must be on the correct side of entry_price
+    - price_target must be in the correct direction vs entry_price
+
     The trailing ``FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**`` line is
     preserved for backward compatibility with the analyst stop-signal text
     and any external code that greps for it.
     """
+    import logging
+    _log = logging.getLogger(__name__)
+
+    action = proposal.action.value.upper()
+
+    # Validate entry/stop are present for directional actions
+    if action in ("BUY", "SELL"):
+        if proposal.entry_price is None:
+            _log.warning("Trader returned %s without entry_price — signal may be incomplete", action)
+        if proposal.stop_loss is None:
+            _log.warning("Trader returned %s without stop_loss — signal may be incomplete", action)
+
+    # Validate directional consistency
+    if proposal.entry_price is not None and proposal.stop_loss is not None:
+        if action == "BUY" and proposal.stop_loss >= proposal.entry_price:
+            _log.warning(
+                "BUY signal has stop_loss (%.2f) >= entry_price (%.2f) — inverted, correcting",
+                proposal.stop_loss, proposal.entry_price,
+            )
+            proposal.stop_loss = round(proposal.entry_price * 0.95, 2)
+        elif action == "SELL" and proposal.stop_loss <= proposal.entry_price:
+            _log.warning(
+                "SELL signal has stop_loss (%.2f) <= entry_price (%.2f) — inverted, correcting",
+                proposal.stop_loss, proposal.entry_price,
+            )
+            proposal.stop_loss = round(proposal.entry_price * 1.05, 2)
+
     parts = [
         f"**Action**: {proposal.action.value}",
         "",

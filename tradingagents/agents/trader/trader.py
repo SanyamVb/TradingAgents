@@ -77,9 +77,10 @@ def create_trader(llm):
                     "Always set Entry Price and Stop Loss relative to the provided price anchor — "
                     "never use prices from older analyst reports if a price anchor is supplied.\n\n"
                     "CRITICAL rules for entry_price, stop_loss, and price_target:\n"
-                    "- For a SELL action: entry_price >= current price, stop_loss > entry_price, price_target < entry_price.\n"
-                    "- For a BUY action: entry_price <= current price, stop_loss < entry_price, price_target > entry_price.\n"
+                    "- For a SELL action: you MUST provide entry_price and stop_loss. entry_price >= current price, stop_loss > entry_price, price_target < entry_price.\n"
+                    "- For a BUY action: you MUST provide entry_price and stop_loss. entry_price <= current price, stop_loss < entry_price, price_target > entry_price.\n"
                     "- For HOLD: entry_price and stop_loss may be omitted.\n"
+                    "- NEVER leave entry_price or stop_loss null on a BUY or SELL action.\n"
                     "Violating these rules (e.g. stop_loss below entry on a sell) is always wrong."
                 ),
             },

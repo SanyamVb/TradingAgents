@@ -171,8 +171,10 @@ def run_ticker(ta: TradingAgentsGraph, ticker: str, trade_date: str, tracker: Us
             print(f"  Thesis       : {thesis_block}")
         tracker.print_ticker_usage(ticker)
 
-    except Exception as exc:
-        print(f"\n  FAILED {ticker}: {exc}")
+    except KeyboardInterrupt:
+        raise  # always propagate keyboard interrupt
+    except BaseException as exc:
+        print(f"\n  FAILED {ticker}: {type(exc).__name__}: {exc}", flush=True)
         logging.exception("Error processing %s", ticker)
 
 
