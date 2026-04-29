@@ -46,10 +46,10 @@ jobs:
           OPENAI_API_KEY:     ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
           GOOGLE_API_KEY:     ${{ secrets.GOOGLE_API_KEY }}
-          # Override LLM via repo variables (Settings → Variables → Actions)
-          TRADINGAGENTS_LLM_PROVIDER:  ${{ vars.TRADINGAGENTS_LLM_PROVIDER }}
-          TRADINGAGENTS_DEEP_LLM:      ${{ vars.TRADINGAGENTS_DEEP_LLM }}
-          TRADINGAGENTS_QUICK_LLM:     ${{ vars.TRADINGAGENTS_QUICK_LLM }}
+          # LLM config — repo Variables override these defaults (Settings → Variables → Actions)
+          TRADINGAGENTS_LLM_PROVIDER:  ${{ vars.TRADINGAGENTS_LLM_PROVIDER || 'anthropic' }}
+          TRADINGAGENTS_DEEP_LLM:      ${{ vars.TRADINGAGENTS_DEEP_LLM || 'claude-sonnet-4-6' }}
+          TRADINGAGENTS_QUICK_LLM:     ${{ vars.TRADINGAGENTS_QUICK_LLM || 'claude-haiku-4-5-20251001' }}
           TRADINGAGENTS_BACKEND_URL:   ${{ secrets.TRADINGAGENTS_BACKEND_URL }}
 
       - name: Upload analysis as artifact
