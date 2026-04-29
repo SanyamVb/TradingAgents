@@ -2,9 +2,12 @@ name: NSE Pre-Market Analysis
 
 on:
   schedule:
-    # 8:45 AM IST = 03:15 UTC, Mon–Fri
-    # Note: GitHub Actions cron can fire 1–10 min late during peak times
-    - cron: '15 3 * * 1-5'
+    # Target: results in hand by 8:45 AM IST (market opens 9:15 AM IST).
+    # Scheduled at 02:30 UTC = 08:00 AM IST, Mon-Fri.
+    # GitHub Actions scheduled runs are frequently delayed 30-45 min (sometimes hours)
+    # during peak load, so the 45-min buffer before 8:45 AM IST absorbs typical slippage.
+    # Also off the top/quarter of the hour to reduce contention.
+    - cron: '30 2 * * 1-5'
   workflow_dispatch:
     inputs:
       tickers:
@@ -51,6 +54,8 @@ jobs:
           TRADINGAGENTS_DEEP_LLM:      ${{ vars.TRADINGAGENTS_DEEP_LLM || 'claude-sonnet-4-6' }}
           TRADINGAGENTS_QUICK_LLM:     ${{ vars.TRADINGAGENTS_QUICK_LLM || 'claude-haiku-4-5-20251001' }}
           TRADINGAGENTS_BACKEND_URL:   ${{ secrets.TRADINGAGENTS_BACKEND_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
       - name: Upload analysis as artifact
         if: always()
