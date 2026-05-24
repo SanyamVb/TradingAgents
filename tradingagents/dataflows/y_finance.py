@@ -198,23 +198,39 @@ def _get_stock_stats_bulk(
     from stockstats import wrap
 
     data = load_ohlcv(symbol, curr_date)
+    
+    # Preserve Date column before wrapping (stockstats may modify the dataframe)
+    if "Date" not in data.columns and data.index.name == "Date":
+        data = data.reset_index()
+    
+    dates = data["Date"].copy()  # Save dates before wrap modifies structure
     df = wrap(data)
-    df["Date"] = df["Date"].dt.strftime("%Y-%m-%d")
     
     # Calculate the indicator for all rows at once
-    df[indicator]  # This triggers stockstats to calculate the indicator
+    try:
+        indicator_col = df[indicator]  # This triggers stockstats to calculate the indicator
+    except KeyError as e:
+        # If Date column is missing after wrap, the issue is upstream
+        raise ValueError(f"Indicator calculation failed: {e}. Available columns: {df.columns.tolist()}")
     
     # Create a dictionary mapping date strings to indicator values
     result_dict = {}
-    for _, row in df.iterrows():
-        date_str = row["Date"]
-        indicator_value = row[indicator]
-        
-        # Handle NaN/None values
-        if pd.isna(indicator_value):
-            result_dict[date_str] = "N/A"
+    for i, date_val in enumerate(dates):
+        # Handle both datetime objects and strings
+        if isinstance(date_val, str):
+            date_str = date_val
         else:
-            result_dict[date_str] = str(indicator_value)
+            date_str = pd.to_datetime(date_val).strftime("%Y-%m-%d")
+        
+        # Get indicator value at this index
+        if i < len(indicator_col):
+            indicator_value = indicator_col.iloc[i]
+            
+            # Handle NaN/None values
+            if pd.isna(indicator_value):
+                result_dict[date_str] = "N/A"
+            else:
+                result_dict[date_str] = str(indicator_value)
     
     return result_dict
 
