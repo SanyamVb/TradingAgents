@@ -31,7 +31,7 @@ class RawSignal:
     """Input signal from the swarm consensus engine."""
     ticker: str
     signal: str                          # BUY / SELL / HOLD / SKIP
-    recommendation: str                  # OVERWEIGHT / UNDERWEIGHT / HOLD / SKIP
+    recommendation: str                  # UNDERWEIGHT / HOLD / SKIP (OVERWEIGHT removed due to poor WR)
     confidence: float                    # 0.0 - 1.0 overall swarm confidence
     weighted_score: float                # Raw weighted vote score
     entry_price: Optional[float] = None

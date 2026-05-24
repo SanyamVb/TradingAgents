@@ -23,7 +23,7 @@ from .models import FilterDecision, FilterStage, MarketData, RawSignal, StageRes
 logger = logging.getLogger(__name__)
 
 RECOMMENDATION_MAP = {
-    "BUY": "OVERWEIGHT",
+    "BUY": "UNDERWEIGHT",  # Changed from OVERWEIGHT (17.6% WR) to UNDERWEIGHT (64% WR)
     "SELL": "UNDERWEIGHT",
     "HOLD": "HOLD",
     "SKIP": "SKIP",

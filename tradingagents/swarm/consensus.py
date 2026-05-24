@@ -37,7 +37,7 @@ FALLBACK_WEIGHTS: Dict[str, float] = {
 SIGNAL_VALUES = {"BUY": 1, "HOLD": 0, "SELL": -1, "SKIP": 0}
 
 RECOMMENDATION_MAP = {
-    "BUY": "OVERWEIGHT",
+    "BUY": "UNDERWEIGHT",  # OVERWEIGHT removed - poor performance (17.6% WR)
     "SELL": "UNDERWEIGHT",
     "HOLD": "HOLD",
     "SKIP": "SKIP",

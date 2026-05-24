@@ -30,10 +30,13 @@ from pydantic import BaseModel, Field
 
 
 class PortfolioRating(str, Enum):
-    """5-tier rating used by the Research Manager and Portfolio Manager."""
+    """4-tier rating used by the Research Manager and Portfolio Manager.
+    
+    OVERWEIGHT has been removed due to poor performance (17.6% WR in backtesting).
+    Only UNDERWEIGHT signals with filters are kept (64% WR).
+    """
 
     BUY = "Buy"
-    OVERWEIGHT = "Overweight"
     HOLD = "Hold"
     UNDERWEIGHT = "Underweight"
     SELL = "Sell"
