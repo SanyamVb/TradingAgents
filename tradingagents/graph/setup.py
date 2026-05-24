@@ -74,6 +74,16 @@ class GraphSetup:
             delete_nodes["fundamentals"] = create_msg_delete()
             tool_nodes["fundamentals"] = self.tool_nodes["fundamentals"]
 
+        # Swarm node — replaces or augments single-agent analysis
+        swarm_node = None
+        if "swarm" in selected_analysts:
+            from tradingagents.swarm import create_swarm_node, SwarmConfig
+            swarm_node = create_swarm_node(
+                quick_llm=self.quick_thinking_llm,
+                deep_llm=self.deep_thinking_llm,
+                config=SwarmConfig(),
+            )
+
         # Create researcher and manager nodes
         bull_researcher_node = create_bull_researcher(self.quick_thinking_llm)
         bear_researcher_node = create_bear_researcher(self.quick_thinking_llm)
@@ -107,13 +117,24 @@ class GraphSetup:
         workflow.add_node("Conservative Analyst", conservative_analyst)
         workflow.add_node("Portfolio Manager", portfolio_manager_node)
 
+        # Add swarm node if configured
+        if swarm_node is not None:
+            workflow.add_node("Swarm Analyst", swarm_node)
+
         # Define edges
-        # Start with the first analyst
-        first_analyst = selected_analysts[0]
-        workflow.add_edge(START, f"{first_analyst.capitalize()} Analyst")
+        # Start with the first analyst (skip "swarm" which has no tool loop)
+        tool_analysts_for_start = [a for a in selected_analysts if a != "swarm"]
+        first_analyst = tool_analysts_for_start[0] if tool_analysts_for_start else None
+        if first_analyst:
+            workflow.add_edge(START, f"{first_analyst.capitalize()} Analyst")
+        elif swarm_node is not None:
+            # Only swarm selected
+            workflow.add_edge(START, "Swarm Analyst")
 
         # Connect analysts in sequence
-        for i, analyst_type in enumerate(selected_analysts):
+        # Filter out "swarm" — it has no tool loop, handled separately
+        tool_analysts = [a for a in selected_analysts if a != "swarm"]
+        for i, analyst_type in enumerate(tool_analysts):
             current_analyst = f"{analyst_type.capitalize()} Analyst"
             current_tools = f"tools_{analyst_type}"
             current_clear = f"Msg Clear {analyst_type.capitalize()}"
@@ -126,14 +147,28 @@ class GraphSetup:
             )
             workflow.add_edge(current_tools, current_analyst)
 
-            # Connect to next analyst or to Bull Researcher if this is the last analyst
-            if i < len(selected_analysts) - 1:
-                next_analyst = f"{selected_analysts[i+1].capitalize()} Analyst"
-                workflow.add_edge(current_clear, next_analyst)
+            # Connect to next analyst or to Swarm/Bull Researcher if this is the last analyst
+            if i < len(tool_analysts) - 1:
+                next_analyst_type = tool_analysts[i+1]
+                if next_analyst_type == "swarm":
+                    # Swarm node has no tools, connect directly
+                    workflow.add_edge(current_clear, "Swarm Analyst")
+                else:
+                    next_analyst = f"{next_analyst_type.capitalize()} Analyst"
+                    workflow.add_edge(current_clear, next_analyst)
             else:
-                workflow.add_edge(current_clear, "Bull Researcher")
+                # Last analyst: route to swarm if present, else Bull Researcher
+                if swarm_node is not None and "swarm" not in selected_analysts:
+                    # Swarm runs after all analysts but before researchers
+                    workflow.add_edge(current_clear, "Swarm Analyst")
+                else:
+                    workflow.add_edge(current_clear, "Bull Researcher")
 
         # Add remaining edges
+        # Connect swarm node to Bull Researcher (if swarm was used)
+        if swarm_node is not None:
+            workflow.add_edge("Swarm Analyst", "Bull Researcher")
+
         workflow.add_conditional_edges(
             "Bull Researcher",
             self.conditional_logic.should_continue_debate,

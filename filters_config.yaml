@@ -1,0 +1,60 @@
+# Signal Quality Filter Configuration
+# All thresholds are tunable here without code changes.
+# See tradingagents/filters/config.py for full documentation.
+
+# 1. Consensus Filter: require 60%+ agent agreement for OW/UW
+consensus:
+  enabled: true
+  min_agreement_pct: 0.60        # 60% of agents must agree on direction
+  apply_to_signals: [BUY, SELL]
+
+# 2. Confidence Threshold: require avg confidence > 70 for actionable signals
+confidence:
+  enabled: true
+  min_avg_confidence: 0.70       # 0.0-1.0 scale
+  min_agent_confidence: 0.40     # Per-agent floor (below this drags down average)
+
+# 3. Risk Filters: volatility, liquidity, stop-loss distance
+risk:
+  enabled: true
+  # Volatility: skip if intraday range > 50% of open
+  max_intraday_range_pct: 0.50
+  # Liquidity: skip if volume < 30% of 20d average OR below absolute floor
+  min_volume_ratio: 0.30
+  min_absolute_volume: 100000
+  # Stop-loss: reject if SL distance > 10% from entry
+  max_stop_loss_distance_pct: 0.10
+
+# 4. Historical Performance Filter: adjust position size by ticker win rate
+historical:
+  enabled: true
+  poor_performer_threshold: 0.40    # < 40% win rate → size reduction
+  strong_performer_threshold: 0.60  # > 60% win rate → size boost
+  poor_performer_size_mult: 0.50    # Half position for weak tickers
+  strong_performer_size_mult: 1.25  # 25% boost for strong tickers
+  max_position_size_mult: 1.50      # Hard cap
+  min_trades_required: 5            # Need at least 5 trades to use historical data
+  # Known performers (override history with domain knowledge)
+  known_strong: [HINDUNILVR, TCS, HDFCBANK, INFY, RELIANCE]
+  known_weak: []
+
+# 5. Market Regime Filter: skip conflicting signals in strong trends
+regime:
+  enabled: true
+  bull_threshold_pct: 0.015         # Nifty50 +1.5% = strong bull
+  bear_threshold_pct: -0.015        # Nifty50 -1.5% = strong bear
+  skip_uw_in_bull: true             # Skip SELL/UW in strong bull markets
+  skip_ow_in_bear: true             # Skip BUY/OW in strong bear markets
+  high_vix_threshold: 25.0          # VIX above this = high volatility warning
+
+# 6. Dissent Analysis: veto on high-confidence dissent from risk agents
+dissent:
+  enabled: true
+  strong_dissent_confidence: 0.80   # Log prominently if dissenter confidence >= 80%
+  veto_confidence_threshold: 0.90   # Trigger veto if dissenter confidence >= 90%
+  veto_eligible_agents: [risk_manager, bear]
+
+# Global settings
+log_filtered_signals: true
+track_filter_effectiveness: true
+performance_db_path: ~/.tradingagents/filter_performance.json

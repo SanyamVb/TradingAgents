@@ -71,3 +71,7 @@ class AgentState(MessagesState):
     ]
     final_trade_decision: Annotated[str, "Final decision made by the Risk Analysts"]
     past_context: Annotated[str, "Memory log context injected at run start (same-ticker decisions + cross-ticker lessons)"]
+
+    # Swarm consensus fields (populated when swarm node is used)
+    swarm_report: Annotated[str, "Full markdown report from the 5-agent swarm debate"]
+    swarm_consensus: Annotated[dict, "Structured consensus result: recommendation, confidence, votes, dissenting"]
