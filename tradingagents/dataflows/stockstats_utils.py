@@ -137,7 +137,20 @@ def load_ohlcv(symbol: str, curr_date: str) -> pd.DataFrame:
             auto_adjust=True,
         ))
         data = data.reset_index()
-        data.to_csv(data_file, index=False, encoding="utf-8")
+        
+        # Ensure Date column is properly named before saving
+        if 'index' in data.columns and 'Date' not in data.columns:
+            data = data.rename(columns={'index': 'Date'})
+        elif data.index.name == 'Date':
+            data = data.reset_index()
+        
+        # Final validation before saving
+        if 'Date' not in data.columns:
+            logger.error(f"Cannot save cache for {symbol} - no Date column. Columns: {data.columns.tolist()}")
+            # Continue without saving to cache
+        else:
+            data.to_csv(data_file, index=False, encoding="utf-8")
+            logger.debug(f"Saved cache for {symbol} with columns: {data.columns.tolist()}")
 
     data = _clean_dataframe(data)
 
