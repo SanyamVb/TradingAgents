@@ -35,6 +35,12 @@ jobs:
           pip install -e .
           pip install pandas-market-calendars>=4.3
 
+      - name: Clear data cache
+        run: |
+          # Clear any corrupted cache files from previous runs
+          rm -rf ~/.tradingagents/cache/*.csv || true
+          echo "✓ Data cache cleared"
+
       - name: Run pre-market analysis
         id: analysis
         run: |
