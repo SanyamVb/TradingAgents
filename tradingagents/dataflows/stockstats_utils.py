@@ -34,12 +34,30 @@ def yf_retry(func, max_retries=3, base_delay=2.0):
 
 def _clean_dataframe(data: pd.DataFrame) -> pd.DataFrame:
     """Normalize a stock DataFrame for stockstats: parse dates, drop invalid rows, fill price gaps."""
+    if data.empty:
+        logger.warning("Received empty DataFrame in _clean_dataframe")
+        return data
+    
+    # Ensure Date column exists
+    if "Date" not in data.columns:
+        logger.error(f"Date column not found. Available columns: {data.columns.tolist()}")
+        return pd.DataFrame()  # Return empty DataFrame
+    
     data["Date"] = pd.to_datetime(data["Date"], errors="coerce")
     data = data.dropna(subset=["Date"])
+    
+    if data.empty:
+        logger.warning("DataFrame empty after cleaning Date column")
+        return data
 
     price_cols = [c for c in ["Open", "High", "Low", "Close", "Volume"] if c in data.columns]
     data[price_cols] = data[price_cols].apply(pd.to_numeric, errors="coerce")
     data = data.dropna(subset=["Close"])
+    
+    if data.empty:
+        logger.warning("DataFrame empty after cleaning price columns")
+        return data
+    
     data[price_cols] = data[price_cols].ffill().bfill()
 
     return data
@@ -134,16 +152,42 @@ class StockstatsUtils:
             str, "curr date for retrieving stock price data, YYYY-mm-dd"
         ],
     ):
-        data = load_ohlcv(symbol, curr_date)
-        df = wrap(data)
-        df["Date"] = df["Date"].dt.strftime("%Y-%m-%d")
-        curr_date_str = pd.to_datetime(curr_date).strftime("%Y-%m-%d")
+        try:
+            data = load_ohlcv(symbol, curr_date)
+            
+            # Check if data is empty or invalid
+            if data.empty:
+                logger.warning(f"No data available for {symbol} on {curr_date}")
+                return "N/A: No data available"
+            
+            if "Date" not in data.columns:
+                logger.error(f"Date column missing for {symbol}. Columns: {data.columns.tolist()}")
+                return "N/A: Data format error"
+            
+            df = wrap(data)
+            
+            # Safely convert Date column
+            if "Date" not in df.columns:
+                logger.error(f"Date column lost after wrap() for {symbol}")
+                return "N/A: Data format error"
+            
+            df["Date"] = df["Date"].dt.strftime("%Y-%m-%d")
+            curr_date_str = pd.to_datetime(curr_date).strftime("%Y-%m-%d")
 
-        df[indicator]  # trigger stockstats to calculate the indicator
-        matching_rows = df[df["Date"].str.startswith(curr_date_str)]
+            # Trigger stockstats to calculate the indicator
+            _ = df[indicator]
+            
+            matching_rows = df[df["Date"].str.startswith(curr_date_str)]
 
-        if not matching_rows.empty:
-            indicator_value = matching_rows[indicator].values[0]
-            return indicator_value
-        else:
-            return "N/A: Not a trading day (weekend or holiday)"
+            if not matching_rows.empty:
+                indicator_value = matching_rows[indicator].values[0]
+                return indicator_value
+            else:
+                return "N/A: Not a trading day (weekend or holiday)"
+                
+        except KeyError as e:
+            logger.error(f"KeyError in get_stock_stats for {symbol}/{indicator}/{curr_date}: {e}")
+            return f"N/A: Column error ({e})"
+        except Exception as e:
+            logger.error(f"Error in get_stock_stats for {symbol}/{indicator}/{curr_date}: {type(e).__name__}: {e}")
+            return f"N/A: {type(e).__name__}"
