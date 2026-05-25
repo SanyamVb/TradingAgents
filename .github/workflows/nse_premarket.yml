@@ -41,6 +41,48 @@ jobs:
           rm -rf ~/.tradingagents/cache/*.csv || true
           echo "✓ Data cache cleared"
 
+      - name: Validate API credentials
+        run: |
+          python -c "
+          import os
+          import sys
+          from anthropic import Anthropic
+          
+          api_key = os.environ.get('ANTHROPIC_API_KEY', '').strip()
+          
+          # Check for common issues
+          if not api_key:
+              print('❌ ERROR: ANTHROPIC_API_KEY is not set')
+              sys.exit(1)
+          
+          if api_key.startswith(' ') or api_key.endswith(' '):
+              print('❌ ERROR: ANTHROPIC_API_KEY has leading or trailing spaces')
+              print(f'   Key length: {len(api_key)} chars')
+              sys.exit(1)
+          
+          if api_key.startswith('\"') or api_key.startswith(\"'\"):
+              print('❌ ERROR: ANTHROPIC_API_KEY has quotes around it')
+              sys.exit(1)
+          
+          # Test API connection with a minimal request
+          try:
+              client = Anthropic(api_key=api_key)
+              response = client.messages.create(
+                  model='claude-haiku-4-5-20251001',
+                  max_tokens=10,
+                  messages=[{'role': 'user', 'content': 'Hi'}]
+              )
+              print('✓ Anthropic API key validated successfully')
+              print(f'  Model: claude-haiku-4-5-20251001')
+              print(f'  Response received: {len(response.content[0].text)} chars')
+          except Exception as e:
+              print(f'❌ ERROR: Anthropic API validation failed')
+              print(f'   {type(e).__name__}: {e}')
+              sys.exit(1)
+          "
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
       - name: Run pre-market analysis
         id: analysis
         run: |
