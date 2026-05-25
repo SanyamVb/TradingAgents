@@ -91,19 +91,39 @@ def load_ohlcv(symbol: str, curr_date: str) -> pd.DataFrame:
 
     if os.path.exists(data_file):
         data = pd.read_csv(data_file, on_bad_lines="skip", encoding="utf-8")
-        # Validate cache covers curr_date — if the latest row is older than
-        # the requested date, the cache is stale and must be refreshed.
-        try:
-            max_cached = pd.to_datetime(data["Date"], errors="coerce").max()
-            if pd.isna(max_cached) or max_cached < curr_date_dt:
-                logger.info(
-                    "Cache for %s is stale (max=%s, requested=%s) — refreshing",
-                    symbol, max_cached, curr_date_dt,
-                )
+        
+        # Fix column naming issue: if 'index' column exists but not 'Date', rename it
+        if "index" in data.columns and "Date" not in data.columns:
+            data = data.rename(columns={"index": "Date"})
+            logger.debug(f"Renamed 'index' column to 'Date' for {symbol}")
+        
+        # If no Date column at all, try to use the index
+        if "Date" not in data.columns:
+            if data.index.name == "Date" or isinstance(data.index, pd.DatetimeIndex):
+                data = data.reset_index()
+                if "index" in data.columns:
+                    data = data.rename(columns={"index": "Date"})
+            else:
+                logger.error(f"No Date column found in cache for {symbol}. Columns: {data.columns.tolist()}")
                 os.remove(data_file)
                 data = None
-        except Exception:
-            data = None
+        
+        # Validate cache covers curr_date — if the latest row is older than
+        # the requested date, the cache is stale and must be refreshed.
+        if data is not None:
+            try:
+                max_cached = pd.to_datetime(data["Date"], errors="coerce").max()
+                if pd.isna(max_cached) or max_cached < curr_date_dt:
+                    logger.info(
+                        "Cache for %s is stale (max=%s, requested=%s) — refreshing",
+                        symbol, max_cached, curr_date_dt,
+                    )
+                    os.remove(data_file)
+                    data = None
+            except Exception as e:
+                logger.error(f"Error validating cache for {symbol}: {e}")
+                os.remove(data_file)
+                data = None
     else:
         data = None
 

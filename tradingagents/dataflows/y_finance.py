@@ -199,10 +199,20 @@ def _get_stock_stats_bulk(
 
     data = load_ohlcv(symbol, curr_date)
     
-    # Preserve Date column before wrapping (stockstats may modify the dataframe)
-    if "Date" not in data.columns and data.index.name == "Date":
-        data = data.reset_index()
+    # Validate data is not empty
+    if data.empty:
+        raise ValueError(f"No data available for {symbol}")
     
+    # Ensure Date column exists
+    if "Date" not in data.columns:
+        if data.index.name == "Date" or isinstance(data.index, pd.DatetimeIndex):
+            data = data.reset_index()
+            if "index" in data.columns:
+                data = data.rename(columns={"index": "Date"})
+        else:
+            raise ValueError(f"No Date column in data for {symbol}. Available columns: {data.columns.tolist()}")
+    
+    # Preserve Date column before wrapping (stockstats may modify the dataframe)
     dates = data["Date"].copy()  # Save dates before wrap modifies structure
     df = wrap(data)
     
